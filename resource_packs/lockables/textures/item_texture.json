@@ -1,0 +1,8 @@
+{
+  "resource_pack_name": "Lockables Resource Pack",
+  "texture_data": {
+    "lockables:key": {
+      "textures": "textures/items/key"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.30",
+  "minecraft:item": {
+    "description": {
+      "identifier": "lockables:key",
+      "menu_category": {
+        "category": "items"
+      }
+    },
+    "components": {
+      "minecraft:max_stack_size": 1,
+      "minecraft:icon": "lockables:key",
+      "minecraft:display_name": {
+        "value": "Schlüssel"
+      }
+    }
+  }
+}

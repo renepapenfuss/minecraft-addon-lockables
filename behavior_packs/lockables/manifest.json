@@ -1,0 +1,44 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Lockables Behavior Pack",
+    "name": "Lockables Behavior Pack",
+    "uuid": "89f1a513-cc44-4d85-8f17-c3adee67ef19",
+    "version": [1, 0, 1],
+    "min_engine_version": [1, 20, 30]
+  },
+  "modules": [
+    {
+      "description": "Lockables Behavior Pack",
+      "type": "data",
+      "uuid": "b0d90dde-097c-4161-8805-a24736857409",
+      "version": [1, 0, 1]
+    },
+    {
+      "description": "Lockables Script Module",
+      "language": "javascript",
+      "type": "script",
+      "uuid": "2747971d-c1cd-455d-b678-6c48050d45e5",
+      "version": [
+        1,
+        0,
+        0
+      ],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.8.0"
+    },
+    {
+      "uuid": "2d7ed858-97eb-48a0-b180-7c80d1ce9a48",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}
