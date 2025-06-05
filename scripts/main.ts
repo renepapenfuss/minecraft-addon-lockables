@@ -83,14 +83,11 @@ world.afterEvents.itemStartUseOn.subscribe(
 
     const item = event.itemStack;
 
-    const player = event.source;
-
-    player.sendMessage(`${item?.typeId}`);
-
     if (!item || item.typeId !== "lockables:key") {
       return;
     }
 
+    const player = event.source;
     const chestLocation = getStringifiedChestLocation(block);
 
     if (lockedChests[chestLocation] === player.name) {
