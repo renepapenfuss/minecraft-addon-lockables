@@ -1,20 +1,25 @@
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
 import minecraftLinting from "eslint-plugin-minecraft-linting";
-import tsParser from "@typescript-eslint/parser";
-import ts from "@typescript-eslint/eslint-plugin";
 
-export default [
+export default defineConfig([
   {
-    files: ["scripts/**/*.ts"],
-    languageOptions: {
-      parser: tsParser,
-      ecmaVersion: "latest",
-    },
+    files: [
+      "scripts/**/*.{js,mjs,cjs,ts,mts,cts}",
+    ],
     plugins: {
-      ts,
+      js,
       "minecraft-linting": minecraftLinting,
     },
+    extends: [
+      "js/recommended",
+    ],
     rules: {
       "minecraft-linting/avoid-unnecessary-command": "error",
     },
   },
-];
+  { files: ["scripts/**/*.{js,mjs,cjs,ts,mts,cts}"], languageOptions: { globals: globals.node } },
+  tseslint.configs.recommended,
+]);
