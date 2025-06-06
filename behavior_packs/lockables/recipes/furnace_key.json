@@ -1,0 +1,11 @@
+{
+  "format_version": "1.17",
+  "minecraft:recipe_furnace": {
+    "description": {
+      "identifier": "lockables:furnace_key"
+    },
+    "tags": ["blast_furnace"],
+    "input": "minecraft:iron_ingot",
+    "output": "lockables:key"
+  }
+}
