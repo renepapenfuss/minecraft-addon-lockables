@@ -1,73 +1,32 @@
 import {
   world,
-  Block,
   PlayerInteractWithBlockBeforeEvent,
-  Player,
   ItemStartUseOnAfterEvent,
   PlayerBreakBlockBeforeEvent,
   system,
 } from "@minecraft/server";
+import config from "./config";
+import {
+  loadLockedContainers,
+  lockContainer,
+  saveLockedContainers,
+  unlockContainer,
+} from "./services/locked-containers.service";
+import {
+  ContainerOwnerStatus,
+  getContainerOwnerStatus,
+  isModerator,
+  isOperator,
+} from "./services/permissions.service";
 
-const lockedChests: { [location: string]: string } = {};
-const PROPERTY_NAME = "lockedChestsData";
-
-const lockableChestTypes = ["minecraft:chest", "minecraft:barrel"];
-
-function saveLockedChests() {
-  try {
-    const jsonData = JSON.stringify(lockedChests);
-    world.setDynamicProperty(PROPERTY_NAME, jsonData);
-  } catch (error) {
-    console.warn("Fehler beim Speichern der Kisten: " + error);
-  }
-}
-
-function loadLockedChests() {
-  try {
-    const jsonData = world.getDynamicProperty(PROPERTY_NAME);
-
-    if (typeof jsonData === "string" && jsonData.length > 0) {
-      const savedChests = JSON.parse(jsonData);
-
-      Object.keys(savedChests).forEach((key) => {
-        lockedChests[key] = savedChests[key];
-      });
-    } else {
-      console.warn("Keine gespeicherten Kisten gefunden.");
-    }
-  } catch (error) {
-    console.warn("Fehler beim Laden der Kisten: " + error);
-    world.setDynamicProperty(PROPERTY_NAME, "{}");
-  }
-}
-
-function getStringifiedChestLocation(block: Block): string {
-  const { x, y, z } = block.location;
-  return `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
-}
-
-function canAccessChest(player: Player, block: Block): boolean {
-  const chestKey = getStringifiedChestLocation(block);
-
-  if (player.hasTag("operator") || player.hasTag("moderator")) {
-    return true;
-  }
-
-  if (!lockedChests[chestKey]) {
-    return true;
-  }
-
-  return lockedChests[chestKey] === player.name;
-}
-
+// save locked containers every 6000 ticks (5 minutes)
 system.runInterval(() => {
-  saveLockedChests();
-}, 6000); // 6000 Ticks = 5 Minuten
+  saveLockedContainers();
+}, 6000);
 
 system.run(() => {
   try {
-    loadLockedChests();
-    world.sendMessage("§aKistensicherungssystem wurde initialisiert.");
+    loadLockedContainers();
   } catch (error) {
     console.warn("Fehler beim Initialisieren: " + error);
   }
@@ -75,77 +34,91 @@ system.run(() => {
 
 world.afterEvents.itemStartUseOn.subscribe(
   (event: ItemStartUseOnAfterEvent) => {
-    const block = event.block;
+    const { block, source: player, itemStack: item } = event;
 
-    if (!lockableChestTypes.includes(block.typeId)) {
+    if (!config.lockableContainerTypes.includes(block.typeId)) {
       return;
     }
 
-    const item = event.itemStack;
-
-    if (!item || item.typeId !== "lockables:key") {
+    if (!item || item.typeId !== config.keyType) {
       return;
     }
 
-    const player = event.source;
-    const chestLocation = getStringifiedChestLocation(block);
+    const chestLocation = block.location;
 
-    if (lockedChests[chestLocation] === player.name) {
-      delete lockedChests[chestLocation];
-      player.sendMessage("§aDu hast diese Kiste entsperrt.");
-      saveLockedChests();
-    } else if (!lockedChests[chestLocation]) {
-      lockedChests[chestLocation] = player.name;
+    if (isOperator(player) || isModerator(player)) {
+      return;
+    }
+
+    const containerOwnerStatus = getContainerOwnerStatus(player, chestLocation);
+
+    if (containerOwnerStatus.status === ContainerOwnerStatus.Owner) {
+      unlockContainer(chestLocation);
+
+      player.sendMessage("§eDu hast diese Kiste entsperrt.");
+
+      return;
+    }
+
+    if (containerOwnerStatus.status === ContainerOwnerStatus.Nobody) {
+      lockContainer(player, chestLocation);
+
       player.sendMessage(
         "§aDu hast diese Kiste verschlossen. Nur du kannst sie jetzt öffnen oder zerstören.",
       );
-      saveLockedChests();
-    } else {
+
+      return;
+    }
+
+    if (containerOwnerStatus.status === ContainerOwnerStatus.SomeoneElse) {
       player.sendMessage(
-        `§cDiese Kiste gehört dem Spieler ${lockedChests[chestLocation]}.`,
+        `§cDiese Kiste gehört dem Spieler ${containerOwnerStatus.playerName}.`,
       );
+      return;
     }
   },
 );
 
 world.beforeEvents.playerInteractWithBlock.subscribe(
   (event: PlayerInteractWithBlockBeforeEvent) => {
-    const player = event.player;
-    const block = event.block;
+    const { player, block } = event;
 
-    if (!lockableChestTypes.includes(block.typeId)) {
+    const containerOwnerStatus = getContainerOwnerStatus(
+      player,
+      block.location,
+    );
+
+    if (
+      !config.lockableContainerTypes.includes(block.typeId) ||
+      containerOwnerStatus.status === ContainerOwnerStatus.Owner ||
+      containerOwnerStatus.status === ContainerOwnerStatus.Nobody
+    ) {
       return;
     }
 
-    if (!canAccessChest(player, block)) {
-      player.sendMessage(
-        "§cDiese Kiste ist verschlossen und gehört dir nicht.",
-      );
-      event.cancel = true;
-      return;
-    }
+    player.sendMessage("§cDiese Kiste ist verschlossen und gehört dir nicht.");
+    event.cancel = true;
   },
 );
 
 world.beforeEvents.playerBreakBlock.subscribe(
   (event: PlayerBreakBlockBeforeEvent) => {
-    const player = event.player;
-    const block = event.block;
+    const { player, block } = event;
 
-    if (!lockableChestTypes.includes(block.typeId)) {
+    if (!config.lockableContainerTypes.includes(block.typeId)) {
       return;
     }
 
-    const chestLocation = getStringifiedChestLocation(block);
+    const containerOwnerStatus = getContainerOwnerStatus(
+      player,
+      block.location,
+    );
 
     if (
-      !lockedChests[chestLocation] ||
-      lockedChests[chestLocation] === player.name
+      containerOwnerStatus.status === ContainerOwnerStatus.Owner ||
+      containerOwnerStatus.status === ContainerOwnerStatus.Nobody
     ) {
-      if (lockedChests[chestLocation]) {
-        delete lockedChests[chestLocation];
-        saveLockedChests();
-      }
+      unlockContainer(block.location);
       return;
     }
 
