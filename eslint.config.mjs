@@ -1,25 +1,17 @@
-import js from "@eslint/js";
-import globals from "globals";
+import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
-import { defineConfig } from "eslint/config";
 import minecraftLinting from "eslint-plugin-minecraft-linting";
 
-export default defineConfig([
+export default tseslint.config(
+  eslint.configs.recommended,
+  tseslint.configs.strict,
+  tseslint.configs.stylistic,
   {
-    files: [
-      "scripts/**/*.{js,mjs,cjs,ts,mts,cts}",
-    ],
     plugins: {
-      js,
       "minecraft-linting": minecraftLinting,
     },
-    extends: [
-      "js/recommended",
-    ],
     rules: {
       "minecraft-linting/avoid-unnecessary-command": "error",
     },
-  },
-  { files: ["scripts/**/*.{js,mjs,cjs,ts,mts,cts}"], languageOptions: { globals: globals.node } },
-  tseslint.configs.recommended,
-]);
+  }
+);

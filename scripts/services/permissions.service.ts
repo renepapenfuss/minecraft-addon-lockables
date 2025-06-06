@@ -16,10 +16,10 @@ export enum ContainerOwnerStatus {
   Nobody,
 }
 
-type ContainerOwnerStatusType = {
+interface ContainerOwnerStatusType {
   status: ContainerOwnerStatus;
   playerName: string;
-};
+}
 
 export function getContainerOwnerStatus(
   player: Player,
